@@ -3,9 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced Document Scanner</title>
+    <title>Advanced Document Scanner - Scan, Save & Organize Documents</title>
+    <meta name="description" content="Free online document scanner with OCR, PDF generation, and cloud storage. Scan documents with your camera or upload images to create digital copies.">
+    <meta name="keywords" content="document scanner, PDF scanner, OCR scanner, mobile scanner, scan documents, digitize documents">
     <!-- Google Adsense -->
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-YOUR_PUBLISHER_ID" crossorigin="anonymous"></script>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4111440258134064" crossorigin="anonymous"></script>
+    <!-- AdMob -->
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4111440258134064" crossorigin="anonymous"></script>
     <style>
         :root {
             --primary-color: #4f46e5;
@@ -379,6 +383,16 @@
             border-color: var(--primary-color);
         }
 
+        .enhancement-slider {
+            display: none;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .enhancement-slider.active {
+            display: block;
+        }
+
         .document-history {
             background-color: var(--light-color);
             border-radius: var(--border-radius);
@@ -720,6 +734,59 @@
             -webkit-font-feature-settings: 'liga';
             -webkit-font-smoothing: antialiased;
         }
+
+        /* Slider styles */
+        .slider-container {
+            margin-top: 10px;
+            display: none;
+        }
+
+        .slider-container.active {
+            display: block;
+        }
+
+        .slider {
+            width: 100%;
+            height: 8px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #d1d5db;
+            outline: none;
+            border-radius: 4px;
+        }
+
+        body.dark-mode .slider {
+            background: #4b5563;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .slider::-moz-range-thumb {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+        }
+
+        .slider-value {
+            text-align: center;
+            font-size: 12px;
+            margin-top: 5px;
+            color: var(--dark-color);
+        }
+
+        body.dark-mode .slider-value {
+            color: var(--secondary-color);
+        }
     </style>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
@@ -740,8 +807,8 @@
             <!-- AdSense Ad -->
             <ins class="adsbygoogle"
                 style="display:block"
-                data-ad-client="ca-pub-YOUR_PUBLISHER_ID"
-                data-ad-slot="YOUR_AD_SLOT"
+                data-ad-client="ca-pub-4111440258134064"
+                data-ad-slot="8814394638"
                 data-ad-format="auto"
                 data-full-width-responsive="true"></ins>
             <script>
@@ -798,8 +865,8 @@
                 <div class="ad-container" style="margin-top: 20px;">
                     <ins class="adsbygoogle"
                         style="display:block"
-                        data-ad-client="ca-pub-YOUR_PUBLISHER_ID"
-                        data-ad-slot="YOUR_AD_SLOT"
+                        data-ad-client="ca-pub-4111440258134064"
+                        data-ad-slot="8814394638"
                         data-ad-format="auto"
                         data-full-width-responsive="true"></ins>
                     <script>
@@ -872,10 +939,18 @@
                             <i class="material-icons">invert_colors_off</i>
                             <span>Grayscale</span>
                         </button>
+                        <div class="slider-container" id="brightnessSliderContainer">
+                            <input type="range" min="-100" max="100" value="0" class="slider" id="brightnessSlider">
+                            <div class="slider-value" id="brightnessValue">0</div>
+                        </div>
                         <button class="enhancement-btn" id="brightnessBtn">
                             <i class="material-icons">brightness_6</i>
                             <span>Brightness</span>
                         </button>
+                        <div class="slider-container" id="contrastSliderContainer">
+                            <input type="range" min="0" max="200" value="100" class="slider" id="contrastSlider">
+                            <div class="slider-value" id="contrastValue">100%</div>
+                        </div>
                         <button class="enhancement-btn" id="contrastBtn">
                             <i class="material-icons">contrast</i>
                             <span>Contrast</span>
@@ -933,8 +1008,8 @@
                 <div class="ad-container">
                     <ins class="adsbygoogle"
                         style="display:block"
-                        data-ad-client="ca-pub-YOUR_PUBLISHER_ID"
-                        data-ad-slot="YOUR_AD_SLOT"
+                        data-ad-client="ca-pub-4111440258134064"
+                        data-ad-slot="8814394638"
                         data-ad-format="auto"
                         data-full-width-responsive="true"></ins>
                     <script>
@@ -1124,6 +1199,8 @@
         let signatureCanvas = null;
         let signatureCtx = null;
         let isDrawing = false;
+        let brightnessSliderVisible = false;
+        let contrastSliderVisible = false;
 
         // DOM elements
         const videoElement = document.getElementById('scanner-video');
@@ -1148,13 +1225,12 @@
         const historyList = document.getElementById('historyList');
         const statusMessage = document.getElementById('statusMessage');
         const themeToggle = document.getElementById('themeToggle');
-
-        // Modals
-        const uploadModal = document.getElementById('uploadModal');
-        const multiPageModal = document.getElementById('multiPageModal');
-        const ocrModal = document.getElementById('ocrModal');
-        const exportModal = document.getElementById('exportModal');
-        const signatureModal = document.getElementById('signatureModal');
+        const brightnessSlider = document.getElementById('brightnessSlider');
+        const contrastSlider = document.getElementById('contrastSlider');
+        const brightnessValue = document.getElementById('brightnessValue');
+        const contrastValue = document.getElementById('contrastValue');
+        const brightnessSliderContainer = document.getElementById('brightnessSliderContainer');
+        const contrastSliderContainer = document.getElementById('contrastSliderContainer');
 
         // Initialize the app
         document.addEventListener('DOMContentLoaded', function() {
@@ -1278,11 +1354,15 @@
             // Document processing buttons
             autoEnhanceBtn.addEventListener('click', applyAutoEnhance);
             grayscaleBtn.addEventListener('click', applyGrayscale);
-            brightnessBtn.addEventListener('click', showBrightnessControl);
-            contrastBtn.addEventListener('click', showContrastControl);
+            brightnessBtn.addEventListener('click', toggleBrightnessSlider);
+            contrastBtn.addEventListener('click', toggleContrastSlider);
             rotateBtn.addEventListener('click', rotateImage);
             cropBtn.addEventListener('click', toggleCropMode);
             perspectiveBtn.addEventListener('click', togglePerspectiveMode);
+
+            // Slider events
+            brightnessSlider.addEventListener('input', applyBrightness);
+            contrastSlider.addEventListener('input', applyContrast);
 
             // Main action buttons
             saveBtn.addEventListener('click', saveDocument);
@@ -1317,6 +1397,75 @@
             } else {
                 icon.textContent = 'brightness_4';
             }
+        }
+
+        // Toggle brightness slider
+        function toggleBrightnessSlider() {
+            brightnessSliderVisible = !brightnessSliderVisible;
+            if (brightnessSliderVisible) {
+                brightnessSliderContainer.classList.add('active');
+                contrastSliderContainer.classList.remove('active');
+                contrastSliderVisible = false;
+            } else {
+                brightnessSliderContainer.classList.remove('active');
+            }
+        }
+
+        // Toggle contrast slider
+        function toggleContrastSlider() {
+            contrastSliderVisible = !contrastSliderVisible;
+            if (contrastSliderVisible) {
+                contrastSliderContainer.classList.add('active');
+                brightnessSliderContainer.classList.remove('active');
+                brightnessSliderVisible = false;
+            } else {
+                contrastSliderContainer.classList.remove('active');
+            }
+        }
+
+        // Apply brightness adjustment
+        function applyBrightness() {
+            if (!currentDocument) return;
+            
+            const value = parseInt(brightnessSlider.value);
+            brightnessValue.textContent = value;
+            
+            const canvas = document.getElementById('scanner-canvas');
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = Math.min(255, Math.max(0, data[i] + value));     // R
+                data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + value)); // G
+                data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + value)); // B
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+            currentDocument.imageData = canvas.toDataURL('image/jpeg', 0.9);
+        }
+
+        // Apply contrast adjustment
+        function applyContrast() {
+            if (!currentDocument) return;
+            
+            const value = parseInt(contrastSlider.value);
+            const contrast = value / 100; // Convert percentage to factor
+            contrastValue.textContent = value + '%';
+            
+            const canvas = document.getElementById('scanner-canvas');
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = ((data[i] / 255 - 0.5) * contrast + 0.5) * 255;     // R
+                data[i + 1] = ((data[i + 1] / 255 - 0.5) * contrast + 0.5) * 255; // G
+                data[i + 2] = ((data[i + 2] / 255 - 0.5) * contrast + 0.5) * 255; // B
+            }
+            
+            ctx.putImageData(imageData, 0, 0);
+            currentDocument.imageData = canvas.toDataURL('image/jpeg', 0.9);
         }
 
         // Toggle camera on/off
@@ -1658,54 +1807,6 @@
             showStatus('Grayscale filter applied', 'success');
         }
 
-        // Show brightness control
-        function showBrightnessControl() {
-            // In a real app, this would show a slider to adjust brightness
-            alert('Brightness control would appear here. For this demo, we\'ll just apply a fixed adjustment.');
-            
-            if (!currentDocument) return;
-            
-            const canvas = document.getElementById('scanner-canvas');
-            const ctx = canvas.getContext('2d');
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-            const brightness = 30; // Fixed value for demo
-            
-            for (let i = 0; i < data.length; i += 4) {
-                data[i] = Math.min(255, Math.max(0, data[i] + brightness));     // R
-                data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + brightness)); // G
-                data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + brightness)); // B
-            }
-            
-            ctx.putImageData(imageData, 0, 0);
-            currentDocument.imageData = canvas.toDataURL('image/jpeg', 0.9);
-            showStatus('Brightness adjusted', 'success');
-        }
-
-        // Show contrast control
-        function showContrastControl() {
-            // In a real app, this would show a slider to adjust contrast
-            alert('Contrast control would appear here. For this demo, we\'ll just apply a fixed adjustment.');
-            
-            if (!currentDocument) return;
-            
-            const canvas = document.getElementById('scanner-canvas');
-            const ctx = canvas.getContext('2d');
-            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const data = imageData.data;
-            const contrast = 1.2; // Fixed value for demo
-            
-            for (let i = 0; i < data.length; i += 4) {
-                data[i] = ((data[i] / 255 - 0.5) * contrast + 0.5) * 255;     // R
-                data[i + 1] = ((data[i + 1] / 255 - 0.5) * contrast + 0.5) * 255; // G
-                data[i + 2] = ((data[i + 2] / 255 - 0.5) * contrast + 0.5) * 255; // B
-            }
-            
-            ctx.putImageData(imageData, 0, 0);
-            currentDocument.imageData = canvas.toDataURL('image/jpeg', 0.9);
-            showStatus('Contrast adjusted', 'success');
-        }
-
         // Rotate image
         function rotateImage() {
             if (!currentDocument) return;
@@ -1934,6 +2035,18 @@
             // Reset enhancement buttons
             autoEnhanceBtn.classList.remove('active');
             grayscaleBtn.classList.remove('active');
+            
+            // Hide sliders
+            brightnessSliderContainer.classList.remove('active');
+            contrastSliderContainer.classList.remove('active');
+            brightnessSliderVisible = false;
+            contrastSliderVisible = false;
+            
+            // Reset slider values
+            brightnessSlider.value = 0;
+            brightnessValue.textContent = '0';
+            contrastSlider.value = 100;
+            contrastValue.textContent = '100%';
             
             showStatus('Scanner reset', 'success');
         }
